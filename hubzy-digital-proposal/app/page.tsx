@@ -457,7 +457,7 @@ export default function ProposalApp() {
             <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-border-subtle -z-10 -translate-y-1/2"></div>
             
             {/* Step 1 */}
-            <div className="bg-surface-card rounded-2xl p-6 border border-border-subtle card-shadow text-center relative hover:border-primary/30 transition-all duration-300">
+            <div className="bg-surface-card rounded-2xl p-6 border border-border-subtle card-shadow text-center relative hover:border-primary/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
               <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4 font-bold shadow-inner">
                 <MousePointerClick className="w-5 h-5" />
               </div>
@@ -468,7 +468,7 @@ export default function ProposalApp() {
             </div>
 
             {/* Step 2 */}
-            <div className="bg-surface-card rounded-2xl p-6 border border-border-subtle card-shadow text-center relative hover:border-primary/30 transition-all duration-300">
+            <div className="bg-surface-card rounded-2xl p-6 border border-border-subtle card-shadow text-center relative hover:border-primary/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
               <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4 font-bold shadow-inner">
                 <FileText className="w-5 h-5" />
               </div>
@@ -479,7 +479,7 @@ export default function ProposalApp() {
             </div>
 
             {/* Step 3 */}
-            <div className="bg-surface-card rounded-2xl p-6 border border-border-subtle card-shadow text-center relative hover:border-primary/30 transition-all duration-300">
+            <div className="bg-surface-card rounded-2xl p-6 border border-border-subtle card-shadow text-center relative hover:border-primary/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
               <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4 font-bold shadow-inner">
                 <Handshake className="w-5 h-5" />
               </div>
@@ -520,8 +520,8 @@ export default function ProposalApp() {
                   }}
                   className={`bg-surface-card rounded-2xl p-6 border flex flex-col relative transition-all duration-300 cursor-pointer ${
                     isSelected 
-                      ? 'border-primary ring-2 ring-primary/20 scale-[1.02] shadow-md z-10' 
-                      : 'border-border-subtle hover:border-outline-variant hover:shadow-md'
+                      ? 'border-primary ring-2 ring-primary/20 scale-[1.03] shadow-xl -translate-y-1 z-10' 
+                      : 'border-border-subtle hover:border-purple-300 hover:shadow-xl hover:-translate-y-1'
                   } ${signedProposal ? 'pointer-events-none opacity-85' : ''}`}
                   id={`plan_card_${plan.id}`}
                 >
