@@ -28,6 +28,7 @@ interface Plan {
   name: string;
   subtitle: string;
   price: number;
+  setup: number;
   features: string[];
 }
 
@@ -38,43 +39,56 @@ interface AdditionalService {
   price: number;
 }
 
+// Proposal generator data
+interface ProposalConfig {
+  clientName: string;
+  clientCnpj: string;
+  clientResponsible: string;
+  clientEmail: string;
+  clientPhone: string;
+  validityDate: string;
+  observation: string;
+  notifyEmail: string;
+}
+
 const PLANS: Plan[] = [
   {
     id: 'essencial',
     name: 'Essencial',
-    subtitle: 'Website Institucional Base',
-    price: 2500,
+    subtitle: 'Presença digital completa',
+    price: 497,
+    setup: 500,
     features: [
-      'Landing Page (One-page)',
-      'Design Responsivo',
-      'Integração WhatsApp',
-      'Suporte via e-mail',
+      'Google Meu Negócio',
+      '1 rede social',
+      'Site institucional',
+      'Hospedagem + e-mail',
     ]
   },
   {
     id: 'profissional',
     name: 'Profissional',
-    subtitle: 'Website + SEO + Blog',
-    price: 4800,
+    subtitle: 'Marketing digital ativo',
+    price: 897,
+    setup: 800,
     features: [
-      'Tudo do plano Essencial',
-      'Até 5 páginas internas',
-      'Otimização SEO On-page',
-      'Painel de Blog (CMS)',
-      'Integração Google Analytics',
+      'Tudo do Essencial',
+      '2 redes sociais',
+      'Tráfego Pago (Ads)',
+      '4 posts/mês',
     ]
   },
   {
     id: 'completo',
     name: 'Completo',
-    subtitle: 'E-commerce + Sistema',
-    price: 8900,
+    subtitle: 'Solução total com conteúdo',
+    price: 1497,
+    setup: 1200,
     features: [
-      'Tudo do plano Profissional',
-      'Loja Virtual (Catálogo completo)',
-      'Agendamento Online Integrado',
-      'Painel Administrativo Restrito',
-      'Suporte Prioritário WhatsApp',
+      'Tudo do Profissional',
+      'Blog 4 artigos/mês',
+      '8 posts/mês',
+      'Relatório mensal',
     ]
   }
 ];
@@ -83,20 +97,20 @@ const ADDITIONAL_SERVICES: AdditionalService[] = [
   {
     id: 'seo_articles',
     name: 'Artigos para Blog (SEO)',
-    desc: '4 artigos mensais otimizados para buscas orgânicas.',
-    price: 800
+    desc: '4 textos mensais otimizados para buscas orgânicas.',
+    price: 297
   },
   {
     id: 'social_media',
-    name: 'Gestão de Redes Sociais',
-    desc: '12 posts/mês + Gestão e monitoramento de Instagram/Facebook.',
-    price: 1200
+    name: 'Posts adicionais para redes sociais',
+    desc: '8 artes/mês extras para Instagram e Facebook.',
+    price: 197
   },
   {
     id: 'paid_traffic',
     name: 'Gestão de Tráfego Pago',
-    desc: 'Criação e otimização de campanhas Google Ads + Meta Ads (não inclui verba de mídia).',
-    price: 1500
+    desc: 'Criação e otimização de campanhas Google Ads + Meta Ads (verba de mídia não inclusa).',
+    price: 397
   }
 ];
 
@@ -118,12 +132,44 @@ function generateDocId(): string {
 export default function ProposalApp() {
   // State management
   const [selectedPlanId, setSelectedPlanId] = useState<'essencial' | 'profissional' | 'completo'>('profissional');
-  const [selectedServices, setSelectedServices] = useState<string[]>(['social_media']);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   
   // Customization of proposal details (for great interactivity)
-  const [clientName, setClientName] = useState('Centro Automotivo São Paulo');
+  const [clientName, setClientName] = useState('');
   const [isEditingClient, setIsEditingClient] = useState(false);
-  const [clientInput, setClientInput] = useState('Centro Automotivo São Paulo');
+  const [clientInput, setClientInput] = useState('');
+
+  // Proposal Generator Modal
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(true);
+  const [proposalConfig, setProposalConfig] = useState<ProposalConfig>({
+    clientName: '',
+    clientCnpj: '',
+    clientResponsible: '',
+    clientEmail: '',
+    clientPhone: '',
+    validityDate: '',
+    observation: '',
+    notifyEmail: 'suporte@hubzydigital.dev.br',
+  });
+  const [proposalReady, setProposalReady] = useState(false);
+
+  // Default validity date: 30 days from now
+  useEffect(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    setProposalConfig(prev => ({
+      ...prev,
+      validityDate: d.toISOString().split('T')[0],
+    }));
+  }, []);
+
+  const handleGeneratorSubmit = () => {
+    if (!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim()) return;
+    setClientName(proposalConfig.clientName);
+    setClientInput(proposalConfig.clientName);
+    setIsGeneratorOpen(false);
+    setProposalReady(true);
+  };
 
   // Modals state
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
@@ -149,11 +195,20 @@ export default function ProposalApp() {
   const currentPlan = PLANS.find(p => p.id === selectedPlanId) || PLANS[1];
 
   // Calculations
-  const planPrice = currentPlan.price;
+  const planMonthlyPrice = currentPlan.price;
+  const planSetupPrice = currentPlan.setup;
   const servicesMonthlyPrice = selectedServices.reduce((sum, serviceId) => {
     const service = ADDITIONAL_SERVICES.find(s => s.id === serviceId);
     return sum + (service ? service.price : 0);
   }, 0);
+  const totalMonthly = planMonthlyPrice + servicesMonthlyPrice;
+
+  // Format validity date for display
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  };
 
   // Toggle dynamic services selection
   const toggleService = (serviceId: string) => {
@@ -361,20 +416,29 @@ export default function ProposalApp() {
             <a href="#adicionais" className="text-sm font-medium text-secondary hover:text-primary transition-colors">Serviços</a>
           </nav>
           
-          <button 
-            onClick={() => {
-              if (signedProposal) {
-                // If already signed, scroll to top/show success
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              } else {
-                setIsSigningOpen(true);
-              }
-            }}
-            className="bg-primary text-on-primary px-5 py-2 rounded-lg text-xs font-semibold hover:bg-surface-tint transition-all active:scale-95 shadow-sm"
-            id="nav_accept_btn"
-          >
-            {signedProposal ? 'Ver Assinatura' : 'Aceitar Proposta'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsGeneratorOpen(true)}
+              className="border border-primary text-primary px-4 py-2 rounded-lg text-xs font-semibold hover:bg-primary/5 transition-all flex items-center gap-1.5"
+              id="nav_generator_btn"
+            >
+              <Edit2 className="w-3.5 h-3.5" /> Gerar Proposta
+            </button>
+          
+            <button 
+              onClick={() => {
+                if (signedProposal) {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  setIsSigningOpen(true);
+                }
+              }}
+              className="bg-primary text-on-primary px-5 py-2 rounded-lg text-xs font-semibold hover:bg-surface-tint transition-all active:scale-95 shadow-sm"
+              id="nav_accept_btn"
+            >
+              {signedProposal ? 'Ver Assinatura' : 'Aceitar Proposta'}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -436,14 +500,21 @@ export default function ProposalApp() {
             Proposta Comercial
           </h1>
           <p className="text-base md:text-lg text-secondary max-w-2xl mx-auto font-medium">
-            Desenvolvimento de presença digital e estratégias de crescimento acelerado para <span className="text-primary font-semibold">{clientName}</span>.
+            Desenvolvimento de presença digital e estratégias de crescimento acelerado para <span className="text-primary font-semibold">{clientName || '—'}</span>.
           </p>
+
+          {proposalConfig.observation && (
+            <div className="mt-4 max-w-xl mx-auto text-xs text-secondary bg-surface-container-low border border-border-subtle rounded-xl px-4 py-3 text-left">
+              <span className="font-semibold text-on-surface block mb-0.5">Observação:</span>
+              {proposalConfig.observation}
+            </div>
+          )}
           
           <div className="mt-4 flex justify-center items-center gap-2 text-xs text-gray-500 font-mono">
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span>Emitido em: 23 de Junho de 2026</span>
+            <span>Emitido em: {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
             <span className="text-gray-300">•</span>
-            <span>Válido até: 07 de Julho de 2026</span>
+            <span>Válido até: {formatDate(proposalConfig.validityDate) || '—'}</span>
           </div>
         </section>
 
@@ -534,12 +605,15 @@ export default function ProposalApp() {
                   <div className="mb-6 pt-2">
                     <h3 className={`text-lg font-bold ${isSelected ? 'text-primary' : 'text-on-surface'}`}>{plan.name}</h3>
                     <div className="text-secondary text-xs mt-1 min-h-[16px]">{plan.subtitle}</div>
-                    <div className="mt-5 flex items-baseline">
+                    <div className="mt-4 flex items-baseline">
                       <span className="text-sm font-semibold text-secondary mr-1">R$</span>
                       <span className="text-3xl font-extrabold tracking-tight text-on-surface">
                         {plan.price.toLocaleString('pt-BR')}
                       </span>
-                      <span className="text-xs text-secondary ml-1 font-medium">único</span>
+                      <span className="text-xs text-secondary ml-1 font-medium">/mês</span>
+                    </div>
+                    <div className="text-[11px] text-secondary mt-1">
+                      Setup: <span className="font-semibold text-on-surface">R$ {plan.setup.toLocaleString('pt-BR')}</span> (único)
                     </div>
                   </div>
 
@@ -639,20 +713,16 @@ export default function ProposalApp() {
         <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4 text-center sm:text-left">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Investimento Total Estimado</span>
+              <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Investimento</span>
               <div className="flex items-baseline gap-2.5 mt-0.5">
                 <span className="text-xl md:text-2xl font-black text-primary">
-                  R$ {planPrice.toLocaleString('pt-BR')}
+                  R$ {totalMonthly.toLocaleString('pt-BR')}
                 </span>
-                <span className="text-xs text-secondary font-medium">único</span>
-                {servicesMonthlyPrice > 0 && (
-                  <>
-                    <span className="text-gray-300 text-sm">|</span>
-                    <span className="text-sm md:text-base font-bold text-secondary">
-                      + R$ {servicesMonthlyPrice.toLocaleString('pt-BR')}/mês
-                    </span>
-                  </>
-                )}
+                <span className="text-xs text-secondary font-medium">/mês</span>
+                <span className="text-gray-300 text-sm">|</span>
+                <span className="text-xs text-secondary">
+                  Setup R$ {planSetupPrice.toLocaleString('pt-BR')}
+                </span>
               </div>
             </div>
           </div>
@@ -768,18 +838,24 @@ export default function ProposalApp() {
 
                 <div className="border-t border-border-subtle pt-4 bg-primary/5 -mx-6 -mb-6 p-6 space-y-3">
                   <div className="flex justify-between items-center text-xs text-secondary">
-                    <span>Investimento de Setup (Único):</span>
-                    <span className="font-bold text-on-surface">R$ {planPrice.toLocaleString('pt-BR')}</span>
+                    <span>Setup / implantação (único):</span>
+                    <span className="font-bold text-on-surface">R$ {planSetupPrice.toLocaleString('pt-BR')}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-secondary">
-                    <span>Mensalidade Recorrente:</span>
-                    <span className="font-bold text-on-surface">R$ {servicesMonthlyPrice.toLocaleString('pt-BR')}/mês</span>
+                    <span>Mensalidade base ({currentPlan.name}):</span>
+                    <span className="font-bold text-on-surface">R$ {planMonthlyPrice.toLocaleString('pt-BR')}/mês</span>
                   </div>
+                  {servicesMonthlyPrice > 0 && (
+                    <div className="flex justify-between items-center text-xs text-secondary">
+                      <span>Adicionais:</span>
+                      <span className="font-bold text-on-surface">+ R$ {servicesMonthlyPrice.toLocaleString('pt-BR')}/mês</span>
+                    </div>
+                  )}
                   <div className="border-t border-dashed border-primary/20 pt-3 flex justify-between items-center">
-                    <span className="text-xs font-bold text-primary">Total Estimado no Primeiro Mês:</span>
+                    <span className="text-xs font-bold text-primary">Total mensal:</span>
                     <div className="text-right">
-                      <span className="text-lg font-black text-primary">R$ {(planPrice + servicesMonthlyPrice).toLocaleString('pt-BR')}</span>
-                      <span className="text-[10px] text-secondary block mt-0.5">no primeiro vencimento</span>
+                      <span className="text-lg font-black text-primary">R$ {totalMonthly.toLocaleString('pt-BR')}/mês</span>
+                      <span className="text-[10px] text-secondary block mt-0.5">+ setup R$ {planSetupPrice.toLocaleString('pt-BR')} na adesão</span>
                     </div>
                   </div>
                 </div>
@@ -1019,6 +1095,188 @@ export default function ProposalApp() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL GERADOR DE PROPOSTAS */}
+      <AnimatePresence>
+        {isGeneratorOpen && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl border border-border-subtle flex flex-col my-8"
+              id="generator_modal"
+            >
+              <div className="p-5 border-b border-border-subtle flex justify-between items-center bg-surface-container-low">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h3 className="text-base font-bold text-on-surface">Gerar nova proposta</h3>
+                </div>
+                {proposalReady && (
+                  <button
+                    onClick={() => setIsGeneratorOpen(false)}
+                    className="text-gray-400 hover:text-on-surface p-1 rounded-full hover:bg-surface-container-highest transition-colors"
+                    id="close_generator_btn"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="p-5 space-y-4 overflow-y-auto max-h-[75vh]">
+                <p className="text-xs text-secondary leading-relaxed">
+                  Preencha os dados do cliente. O plano e serviços adicionais são selecionados diretamente na proposta.
+                </p>
+
+                {/* Dados do cliente */}
+                <div>
+                  <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Dados do cliente</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="md:col-span-2">
+                      <label className="text-[11px] font-semibold text-secondary block mb-1">Nome da empresa *</label>
+                      <input
+                        type="text"
+                        value={proposalConfig.clientName}
+                        onChange={e => setProposalConfig(p => ({ ...p, clientName: e.target.value }))}
+                        placeholder="Ex: Centro Automotivo São Paulo Ltda"
+                        className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        id="gen_company"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-secondary block mb-1">CNPJ / CPF</label>
+                      <input
+                        type="text"
+                        value={proposalConfig.clientCnpj}
+                        onChange={e => setProposalConfig(p => ({ ...p, clientCnpj: e.target.value }))}
+                        placeholder="00.000.000/0001-00"
+                        className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        id="gen_cnpj"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-secondary block mb-1">Responsável *</label>
+                      <input
+                        type="text"
+                        value={proposalConfig.clientResponsible}
+                        onChange={e => setProposalConfig(p => ({ ...p, clientResponsible: e.target.value }))}
+                        placeholder="Nome do responsável"
+                        className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        id="gen_responsible"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-secondary block mb-1">E-mail do cliente</label>
+                      <input
+                        type="email"
+                        value={proposalConfig.clientEmail}
+                        onChange={e => setProposalConfig(p => ({ ...p, clientEmail: e.target.value }))}
+                        placeholder="cliente@empresa.com.br"
+                        className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        id="gen_email"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-secondary block mb-1">Telefone / WhatsApp</label>
+                      <input
+                        type="text"
+                        value={proposalConfig.clientPhone}
+                        onChange={e => setProposalConfig(p => ({ ...p, clientPhone: e.target.value }))}
+                        placeholder="(19) 99999-9999"
+                        className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        id="gen_phone"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Validade */}
+                <div>
+                  <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Validade da proposta</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-semibold text-secondary block mb-1">Válida até</label>
+                      <input
+                        type="date"
+                        value={proposalConfig.validityDate}
+                        onChange={e => setProposalConfig(p => ({ ...p, validityDate: e.target.value }))}
+                        className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        id="gen_validity"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-secondary block mb-1">Seu e-mail (notificação de aceite)</label>
+                      <input
+                        type="email"
+                        value={proposalConfig.notifyEmail}
+                        onChange={e => setProposalConfig(p => ({ ...p, notifyEmail: e.target.value }))}
+                        placeholder="suporte@hubzydigital.dev.br"
+                        className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        id="gen_notify"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Observação */}
+                <div>
+                  <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Observação personalizada (opcional)</span>
+                  <textarea
+                    value={proposalConfig.observation}
+                    onChange={e => setProposalConfig(p => ({ ...p, observation: e.target.value }))}
+                    placeholder="Ex: Proposta elaborada após reunião de 23/06. Inclui desconto de lançamento de 10% no setup."
+                    rows={3}
+                    className="w-full border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                    id="gen_obs"
+                  />
+                </div>
+
+                {/* Plano pré-selecionado */}
+                <div>
+                  <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Plano pré-selecionado</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PLANS.map(plan => (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          selectedPlanId === plan.id
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                            : 'border-border-subtle hover:border-primary/40'
+                        }`}
+                      >
+                        <div className="text-xs font-bold text-on-surface">{plan.name}</div>
+                        <div className="text-sm font-black text-primary mt-0.5">R${plan.price}<span className="text-[10px] font-normal text-secondary">/mês</span></div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-border-subtle bg-surface-container-low flex justify-end gap-2.5">
+                {proposalReady && (
+                  <button
+                    onClick={() => setIsGeneratorOpen(false)}
+                    className="px-4 py-2 border border-outline-variant rounded-xl text-xs font-semibold hover:bg-surface-container-highest transition-colors"
+                    id="gen_cancel_btn"
+                  >
+                    Cancelar
+                  </button>
+                )}
+                <button
+                  onClick={handleGeneratorSubmit}
+                  disabled={!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim()}
+                  className="px-5 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-surface-tint transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  id="gen_submit_btn"
+                >
+                  <ChevronRight className="w-4 h-4" /> Carregar proposta
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
