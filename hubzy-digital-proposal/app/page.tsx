@@ -340,7 +340,7 @@ export default function ProposalApp() {
       signerEmail,
       plan: currentPlan,
       services: selectedServices.map(id => ADDITIONAL_SERVICES.find(s => s.id === id)).filter(Boolean),
-      oneTimePrice: planPrice,
+      oneTimePrice: planMonthlyPrice,
       monthlyPrice: servicesMonthlyPrice,
       signatureType,
       signatureImage,
@@ -806,7 +806,7 @@ export default function ProposalApp() {
                       <div className="text-xs text-secondary mt-0.5">{currentPlan.subtitle}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-base font-black text-on-surface">R$ {planPrice.toLocaleString('pt-BR')}</div>
+                      <div className="text-base font-black text-on-surface">R$ {planMonthlyPrice.toLocaleString('pt-BR')}</div>
                       <div className="text-[10px] text-secondary">taxa de ativação única</div>
                     </div>
                   </div>
