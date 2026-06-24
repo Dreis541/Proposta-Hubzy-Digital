@@ -153,22 +153,72 @@ export default function ProposalApp() {
   });
   const [proposalReady, setProposalReady] = useState(false);
 
-  // Default validity date: 30 days from now
+  // Default validity date: 30 days from now + leitura de query params
   useEffect(() => {
     const d = new Date();
     d.setDate(d.getDate() + 30);
-    setProposalConfig(prev => ({
-      ...prev,
-      validityDate: d.toISOString().split('T')[0],
-    }));
+    const defaultValidity = d.toISOString().split('T')[0];
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const cliente = params.get('cliente');
+      if (cliente) {
+        // Carrega dados da URL
+        const plano = (params.get('plano') || 'profissional') as 'essencial' | 'profissional' | 'completo';
+        const servicos = params.get('servicos') ? params.get('servicos')!.split(',').filter(Boolean) : [];
+        const validade = params.get('validade') || defaultValidity;
+        setProposalConfig({
+          clientName: cliente,
+          clientCnpj: params.get('cnpj') || '',
+          clientResponsible: params.get('responsavel') || '',
+          clientEmail: params.get('email') || '',
+          clientPhone: params.get('telefone') || '',
+          validityDate: validade,
+          observation: params.get('obs') || '',
+          notifyEmail: 'suporte@hubzydigital.dev.br',
+        });
+        setClientName(cliente);
+        setClientInput(cliente);
+        setSelectedPlanId(plano);
+        setSelectedServices(servicos);
+        setIsGeneratorOpen(false);
+        setProposalReady(true);
+      } else {
+        setProposalConfig(prev => ({ ...prev, validityDate: defaultValidity }));
+      }
+    }
   }, []);
+
+  const [generatedLink, setGeneratedLink] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const handleGeneratorSubmit = () => {
     if (!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim()) return;
     setClientName(proposalConfig.clientName);
     setClientInput(proposalConfig.clientName);
-    setIsGeneratorOpen(false);
+
+    // Gera link com query params
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://proposta.hubzydigital.dev.br';
+    const params = new URLSearchParams({
+      cliente: proposalConfig.clientName,
+      cnpj: proposalConfig.clientCnpj,
+      responsavel: proposalConfig.clientResponsible,
+      email: proposalConfig.clientEmail,
+      telefone: proposalConfig.clientPhone,
+      validade: proposalConfig.validityDate,
+      plano: selectedPlanId,
+      servicos: selectedServices.join(','),
+      obs: proposalConfig.observation,
+    });
+    const link = `${base}?${params.toString()}`;
+    setGeneratedLink(link);
     setProposalReady(true);
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(generatedLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2500);
   };
 
   // Modals state
@@ -1258,24 +1308,50 @@ export default function ProposalApp() {
                 </div>
               </div>
 
-              <div className="p-4 border-t border-border-subtle bg-surface-container-low flex justify-end gap-2.5">
-                {proposalReady && (
-                  <button
-                    onClick={() => setIsGeneratorOpen(false)}
-                    className="px-4 py-2 border border-outline-variant rounded-xl text-xs font-semibold hover:bg-surface-container-highest transition-colors"
-                    id="gen_cancel_btn"
-                  >
-                    Cancelar
-                  </button>
+              <div className="p-4 border-t border-border-subtle bg-surface-container-low flex flex-col gap-3">
+                {generatedLink && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-2">
+                    <div className="text-[10px] font-bold text-primary uppercase tracking-widest">Link da proposta gerado</div>
+                    <div className="text-[11px] text-secondary break-all font-mono bg-white border border-border-subtle rounded-lg px-3 py-2 leading-relaxed">
+                      {generatedLink}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={copyLink}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${linkCopied ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-primary text-white hover:bg-surface-tint'}`}
+                      >
+                        {linkCopied ? <><CheckCircle2 className="w-3.5 h-3.5" /> Copiado!</> : <><Share2 className="w-3.5 h-3.5" /> Copiar link</>}
+                      </button>
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent('Olá! Segue sua proposta comercial Hubzy Digital: ' + generatedLink)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-2 rounded-lg text-xs font-bold bg-green-500 text-white hover:bg-green-600 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        Enviar WhatsApp
+                      </a>
+                    </div>
+                  </div>
                 )}
-                <button
-                  onClick={handleGeneratorSubmit}
-                  disabled={!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim()}
-                  className="px-5 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-surface-tint transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                  id="gen_submit_btn"
-                >
-                  <ChevronRight className="w-4 h-4" /> Carregar proposta
-                </button>
+                <div className="flex justify-end gap-2.5">
+                  {proposalReady && (
+                    <button
+                      onClick={() => setIsGeneratorOpen(false)}
+                      className="px-4 py-2 border border-outline-variant rounded-xl text-xs font-semibold hover:bg-surface-container-highest transition-colors"
+                      id="gen_cancel_btn"
+                    >
+                      {generatedLink ? 'Ver proposta' : 'Cancelar'}
+                    </button>
+                  )}
+                  <button
+                    onClick={handleGeneratorSubmit}
+                    disabled={!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim()}
+                    className="px-5 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-surface-tint transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    id="gen_submit_btn"
+                  >
+                    <ChevronRight className="w-4 h-4" /> {generatedLink ? 'Atualizar link' : 'Gerar link da proposta'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
