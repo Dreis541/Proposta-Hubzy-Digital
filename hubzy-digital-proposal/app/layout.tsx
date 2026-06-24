@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 import { Inter } from 'next/font/google';
-import './globals.css'; // Global styles
+import './globals.css';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Hubzy Digital - Proposta Comercial',
-  description: 'Proposta Comercial Personalizada para Centro Automotivo São Paulo',
+  title: 'Hubzy Digital — Proposta Comercial',
+  description: 'Proposta Comercial Digital — Hubzy Digital',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
