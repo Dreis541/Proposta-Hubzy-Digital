@@ -221,6 +221,17 @@ export default function ProposalApp() {
     setTimeout(() => setLinkCopied(false), 2500);
   };
 
+  // Fechar modal gerador com Esc (só se já houver proposta carregada)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isGeneratorOpen && proposalReady) {
+        setIsGeneratorOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isGeneratorOpen, proposalReady]);
+
   // Modals state
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isSigningOpen, setIsSigningOpen] = useState(false);
@@ -1167,13 +1178,16 @@ export default function ProposalApp() {
                   <h3 className="text-base font-bold text-on-surface">Gerar nova proposta</h3>
                 </div>
                 {proposalReady && (
-                  <button
-                    onClick={() => setIsGeneratorOpen(false)}
-                    className="text-gray-400 hover:text-on-surface p-1 rounded-full hover:bg-surface-container-highest transition-colors"
-                    id="close_generator_btn"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-secondary hidden md:block">Pressione <kbd className="bg-surface-container-highest border border-border-subtle rounded px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd> para fechar</span>
+                    <button
+                      onClick={() => setIsGeneratorOpen(false)}
+                      className="text-gray-400 hover:text-on-surface p-1 rounded-full hover:bg-surface-container-highest transition-colors"
+                      id="close_generator_btn"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
                 )}
               </div>
 
