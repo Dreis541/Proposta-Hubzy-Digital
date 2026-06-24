@@ -21,6 +21,7 @@ import {
   Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../lib/supabase';
 
 // Pricing data structures
 interface Plan {
@@ -191,13 +192,20 @@ export default function ProposalApp() {
 
   const [generatedLink, setGeneratedLink] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [propostaId, setPropostaId] = useState<string | null>(null);
+  const [savingProposta, setSavingProposta] = useState(false);
 
-  const handleGeneratorSubmit = () => {
+  const handleGeneratorSubmit = async () => {
     if (!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim()) return;
     setClientName(proposalConfig.clientName);
     setClientInput(proposalConfig.clientName);
 
-    // Gera link com query params
+    const slug = proposalConfig.clientName
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') + '-' + Date.now();
+
     const base = typeof window !== 'undefined' ? window.location.origin : 'https://proposta.hubzydigital.dev.br';
     const params = new URLSearchParams({
       cliente: proposalConfig.clientName,
@@ -210,9 +218,45 @@ export default function ProposalApp() {
       servicos: selectedServices.join(','),
       obs: proposalConfig.observation,
     });
-    const link = `${base}?${params.toString()}`;
+    const link = `${base}/${slug}?${params.toString()}`;
     setGeneratedLink(link);
     setProposalReady(true);
+
+    // Salvar proposta no Supabase
+    setSavingProposta(true);
+    try {
+      const plan = PLANS.find(p => p.id === selectedPlanId)!;
+      const addonsTotal = selectedServices.reduce((sum, sid) => {
+        const s = ADDITIONAL_SERVICES.find(a => a.id === sid);
+        return sum + (s ? s.price : 0);
+      }, 0);
+
+      const { data, error } = await supabase.from('propostas').upsert({
+        cliente_nome: proposalConfig.clientName,
+        cliente_cnpj: proposalConfig.clientCnpj,
+        cliente_responsavel: proposalConfig.clientResponsible,
+        cliente_email: proposalConfig.clientEmail,
+        cliente_telefone: proposalConfig.clientPhone,
+        validade: proposalConfig.validityDate,
+        plano: selectedPlanId,
+        plano_preco_mensal: plan.price,
+        plano_setup: plan.setup,
+        servicos_adicionais: selectedServices,
+        servicos_total_mensal: addonsTotal,
+        total_mensal: plan.price + addonsTotal,
+        observacao: proposalConfig.observation,
+        status: 'enviada',
+        slug,
+      }, { onConflict: 'slug' }).select().single();
+
+      if (!error && data) {
+        setPropostaId(data.id);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar proposta:', err);
+    } finally {
+      setSavingProposta(false);
+    }
   };
 
   const copyLink = () => {
@@ -355,7 +399,7 @@ export default function ProposalApp() {
   };
 
   // Trigger signature submission
-  const handleSignatureSubmit = (e: React.FormEvent) => {
+  const handleSignatureSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSigningError('');
 
@@ -378,7 +422,6 @@ export default function ProposalApp() {
         setSigningError('Por favor, faça a sua assinatura na tela ou mude para a opção de digitar.');
         return;
       }
-      // Get signature image as base64
       const canvas = canvasRef.current;
       if (canvas) {
         signatureImage = canvas.toDataURL();
@@ -390,9 +433,10 @@ export default function ProposalApp() {
       }
     }
 
-    // Generate dynamic hash certificate
     const randomHash = generateRandomHash();
     const docId = generateDocId();
+    const certificado = `HUBZY-${randomHash.toUpperCase()}`;
+    const timestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
     const newSignedProposal = {
       docId,
@@ -406,14 +450,40 @@ export default function ProposalApp() {
       signatureType,
       signatureImage,
       typedSignature: signatureType === 'type' ? typedSignature : '',
-      timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      certificate: `HUBZY-${randomHash.toUpperCase()}`,
-      ip: '186.234.120.45' // Simulated safe brazilian IP
+      timestamp,
+      certificate: certificado,
+      ip: '—'
     };
+
+    // Salvar aceite no Supabase
+    if (propostaId) {
+      try {
+        await supabase.from('aceites').insert({
+          proposta_id: propostaId,
+          assinante_nome: signerName,
+          assinante_email: signerEmail,
+          tipo_assinatura: signatureType,
+          assinatura_imagem: signatureType === 'draw' ? signatureImage : null,
+          assinatura_texto: signatureType === 'type' ? typedSignature : null,
+          user_agent: navigator.userAgent,
+          certificado,
+          doc_id: docId,
+          timestamp_aceite: new Date().toISOString(),
+        });
+
+        // Atualizar status da proposta para 'aceita'
+        await supabase
+          .from('propostas')
+          .update({ status: 'aceita' })
+          .eq('id', propostaId);
+
+      } catch (err) {
+        console.error('Erro ao salvar aceite:', err);
+      }
+    }
 
     setSignedProposal(newSignedProposal);
     setIsSigningOpen(false);
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1359,11 +1429,15 @@ export default function ProposalApp() {
                   )}
                   <button
                     onClick={handleGeneratorSubmit}
-                    disabled={!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim()}
+                    disabled={!proposalConfig.clientName.trim() || !proposalConfig.clientResponsible.trim() || savingProposta}
                     className="px-5 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-surface-tint transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                     id="gen_submit_btn"
                   >
-                    <ChevronRight className="w-4 h-4" /> {generatedLink ? 'Atualizar link' : 'Gerar link da proposta'}
+                    {savingProposta ? (
+                      <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Salvando...</>
+                    ) : (
+                      <><ChevronRight className="w-4 h-4" /> {generatedLink ? 'Atualizar link' : 'Gerar link da proposta'}</>
+                    )}
                   </button>
                 </div>
               </div>
